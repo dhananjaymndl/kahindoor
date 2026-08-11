@@ -79,9 +79,19 @@ export default function Home() {
 
   const ambienceRef = useRef(null)
   const [band, setBand] = useState('tape') // 'tape' = the record library, 'fm' = live radio
-  // Built on entry, not on band — tearing the player down every time someone
-  // glances at FM would cost a fresh iframe and lose the place in the playlist.
-  const tape = useTube(entered)
+  // Built on mount, not on entry or on band.
+  //
+  // Autoplay with sound is only granted inside a user gesture, and the gesture
+  // here is the entry button. Creating the player on entry meant the click set
+  // a flag, the iframe and the API then loaded over the network, and playVideo
+  // finally ran on `onReady` — seconds later, long outside the gesture window,
+  // where the browser silently refuses it. The player has to already exist for
+  // the click to start it.
+  //
+  // Keying it to `band` would be wrong for a second reason: it would tear the
+  // iframe down every time someone glanced at FM and lose the place in the
+  // playlist.
+  const tape = useTube(true)
   const fm = useFm(band === 'fm')
   const source = band === 'fm' ? fm : tape
   // One corridor per visit, boarded at its origin and walked stop by stop.
@@ -184,9 +194,9 @@ export default function Home() {
       }
     : tape.error
       ? { title: 'Radio silence', artist: tape.error }
-      : tape.loading
-        ? { title: 'Threading the tape…', artist: 'a moment' }
-        : tape.current ?? { title: 'Old Hindi', artist: '' }
+      // The running order is local, so the track is known before the player is:
+      // there is nothing to wait for and no "tuning…" state to show.
+      : tape.current ?? { title: 'Old Hindi', artist: '' }
 
   return (
     <main className={`scene ${lightsOff ? 'lights-off' : ''} ${windowOpen ? 'window-open' : ''} ${glitch ? 'glitching' : ''}`}>

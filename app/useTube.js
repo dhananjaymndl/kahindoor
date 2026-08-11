@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { TRACKS } from './tracks'
 
 /**
  * The tape deck, backed by YouTube's IFrame player.
@@ -9,19 +10,21 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * needs no account from the listener, and streams from the rights holder's own
  * upload — so it scales to an audience instead of to a demo.
  *
- * YouTube's terms require the player stay visible and un-obscured, so it is
- * rendered as a small screen in the corner rather than hidden at 1px. See
- * `.deck` in globals.css.
+ * The running order is ours (see `./tracks`) and tracks are driven one at a time
+ * with loadVideoById, rather than handing the embed a playlist id and hoping.
+ * The deck plays off-screen; see the note on `.deck` in globals.css.
  */
 
-// Saregama's "Old Hindi Songs" playlist — 100 tracks, verified live, and every
-// video sampled from it returned 200 from the oEmbed endpoint, which is the
-// cheapest way to check a video is actually embeddable. A video that exists but
-// has embedding disabled fails there with a 403, and would otherwise only show
-// up as a silent player at runtime.
-const PLAYLIST = 'PLP7LBOIQKXnC-LDzuYY7o9kX80WTdjE_t'
-
 const API_SRC = 'https://www.youtube.com/iframe_api'
+
+const shuffle = arr => {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 // One script, one global callback, however many mounts. React strict mode
 // double-invokes effects in development, so this has to be idempotent.
@@ -43,47 +46,41 @@ function loadApi() {
   return apiPromise
 }
 
-// These uploads pack the whole billing into the title:
-//   "Chura Liya Hai Tumne Jo Dil Ko | Lyrical | Zeenat Aman | Asha Bhosle"
-// The song is the first segment; the rest is a mix of credits and channel
-// boilerplate. Anything matching NOISE is upload furniture, not a person.
-const NOISE = /^(lyrical|lyrical video|video song|full song|full video|audio|audio jukebox|jukebox|old hindi songs?|song|hd|4k|remastered|official)$/i
-
-export function parseTitle(raw, author) {
-  const parts = String(raw ?? '').split('|').map(s => s.trim()).filter(Boolean)
-  if (!parts.length) return { title: 'Old Hindi', artist: '' }
-
-  const title = parts[0]
-  const credits = parts.slice(1).filter(p => !NOISE.test(p))
-  const artist = credits.slice(0, 2).join(' · ')
-
-  // The channel name is a poor last resort, but better than an empty line.
-  return { title, artist: artist || (NOISE.test(author ?? '') ? '' : author ?? '') }
-}
-
 export function useTube(active) {
   const hostRef = useRef(null)
   const playerRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [playing, setPlaying] = useState(false)
-  const [current, setCurrent] = useState(null)
+  const [index, setIndex] = useState(0)
   const [error, setError] = useState(null)
 
   // Volume can be set before the player exists; it is replayed on ready.
   const pendingVolume = useRef(1)
   const wantPlay = useRef(false)
+  // Shuffled once per visit and held in a ref, so the running order survives
+  // every re-render without reshuffling under the listener.
+  const order = useRef(null)
+  if (order.current === null) order.current = shuffle(TRACKS)
 
-  const readTrack = useCallback(() => {
-    const p = playerRef.current
-    if (!p?.getVideoData) return
-    const data = p.getVideoData()
-    if (data?.title) setCurrent({ ...parseTitle(data.title, data.author), id: data.video_id })
+  // The interval-free equivalent of next/prev: move the pointer and hand the
+  // player the new id. `load` starts playback, which is what is wanted whenever
+  // a track changes for any reason other than first paint.
+  const step = useCallback(dir => {
+    setIndex(i => {
+      const n = (i + dir + order.current.length) % order.current.length
+      playerRef.current?.loadVideoById?.(order.current[n].id)
+      return n
+    })
   }, [])
 
+  const current = order.current[index]
+
   useEffect(() => {
-    // Nothing is fetched until someone has actually taken the seat — an API
-    // script and a player iframe on every page load is precisely the eager
-    // loading this app avoids elsewhere.
+    // This does load on first paint, unlike the FM tuner. It has to: autoplay
+    // with sound is only granted inside a user gesture, so the player must
+    // already exist when the entry button is clicked for that click to start
+    // it. Building it on entry meant playVideo ran on `onReady`, seconds after
+    // the gesture had expired, and the browser refused it in silence.
     if (!active || !hostRef.current || playerRef.current) return
 
     let cancelled = false
@@ -104,8 +101,8 @@ export function useTube(active) {
     // Passing an existing iframe also sidesteps the other problem with a div:
     // YT.Player *replaces* the node it is given, and replacing a node React
     // rendered leaves React holding a detached reference that throws on unmount.
+    const first = order.current[0]
     const params = new URLSearchParams({
-      list: PLAYLIST,
       autoplay: '0',
       controls: '0',
       disablekb: '1',
@@ -117,7 +114,7 @@ export function useTube(active) {
       origin: window.location.origin,
     })
     const frame = document.createElement('iframe')
-    frame.src = `https://www.youtube.com/embed/videoseries?${params}`
+    frame.src = `https://www.youtube.com/embed/${first.id}?${params}`
     frame.width = '640'
     frame.height = '360'
     frame.allow = 'autoplay; encrypted-media'
@@ -132,20 +129,18 @@ export function useTube(active) {
           events: {
             onReady: e => {
               if (cancelled) return
-              e.target.setShuffle(true)
               e.target.setVolume(Math.round(pendingVolume.current * 100))
               setReady(true)
-              readTrack()
               if (wantPlay.current) e.target.playVideo()
             },
             onStateChange: e => {
               setPlaying(e.data === YT.PlayerState.PLAYING)
-              if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.CUED) readTrack()
+              // The playlist is ours, so the end of a track is our cue to move.
+              if (e.data === YT.PlayerState.ENDED) step(1)
             },
             // A pulled or region-blocked video shouldn't strand the deck on
-            // silence; step past it the way the old player stepped past a dead
-            // URL. Errors 100/101/150 are exactly that case.
-            onError: () => { playerRef.current?.nextVideo?.() },
+            // silence. Errors 100/101/150 are exactly that case.
+            onError: () => { step(1) },
           },
         })
       })
@@ -160,7 +155,7 @@ export function useTube(active) {
       // case where the player was never constructed.
       if (hostRef.current) hostRef.current.innerHTML = ''
     }
-  }, [active, readTrack])
+  }, [active, step])
 
   const play = useCallback(() => {
     wantPlay.current = true
@@ -177,8 +172,8 @@ export function useTube(active) {
     playerRef.current?.setVolume?.(Math.round(v * 100))
   }, [])
 
-  const next = useCallback(() => { playerRef.current?.nextVideo?.() }, [])
-  const prev = useCallback(() => { playerRef.current?.previousVideo?.() }, [])
+  const next = useCallback(() => step(1), [step])
+  const prev = useCallback(() => step(-1), [step])
 
   return {
     hostRef,
