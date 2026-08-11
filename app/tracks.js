@@ -1,115 +1,61 @@
-// Old Hindi film music from Saregama's "Old Hindi Songs" playlist.
+// Old Hindi film songs, from Saregama's "Old Hindi Songs" playlist.
 //
-// Every id here was checked against YouTube's oEmbed endpoint, which returns 200
-// for an embeddable video and 403 for one with embedding disabled. A blocked
-// video is invisible until it plays silently in the deck, so run the check
-// before adding anything:
+// Two filters made this list, and both matter.
+//
+// **Single songs only.** That playlist is mostly audio jukeboxes -- 62 of its
+// 100 entries run past ten minutes, one of them for 289 -- and a jukebox makes
+// the now-playing line a lie for the next forty minutes. Entries are kept only
+// if they run between 1:30 and 10:00. Duration is the honest signal here;
+// titles are not, since "Kishore Kumar Hits" and a single Kishore song look
+// alike until you read the length.
+//
+// **Embeddable only.** Every id was checked against YouTube's oEmbed endpoint,
+// which returns 200 for an embeddable video and 403 for one with embedding
+// disabled. A blocked video is invisible until it plays silently in the deck:
 //
 //   curl "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=<id>&format=json"
 //
-// The list is explicit rather than a playlist id handed to the player. Driving
-// the deck with loadVideoById keeps the order, the shuffle and the metadata on
-// this side, instead of depending on how the embed happens to treat a
-// videoseries — which is what stopped the music starting at all.
+// Durations come from the watch page ("lengthSeconds"), not from oEmbed, which
+// does not carry them.
 //
-// Titles are cleaned of upload furniture ("Lyrical", "Audio Jukebox") here so
-// the player has nothing to parse at runtime. A few entries are jukeboxes
-// rather than single songs; they are long, era-correct and fine as ambience.
+// Titles are cleaned of upload furniture ("Lyrical", "Audio", "Trending") here
+// rather than at runtime, so the player has nothing to parse and the song is
+// known before the player is.
+//
+// 34 songs, about 183 minutes.
 export const TRACKS = [
-  { id: 'XuCp0r3vhPQ', title: "Chura Liya Hai Tumne Jo Dil Ko", artist: "Zeenat Aman · Asha Bhosle" },
-  { id: 'PUBaJz8eoRk', title: "Itna Na Mujhse Tu Pyar Badha", artist: "Chhaya · Lata Mangeshkar, Talat Mahmood, Sunil Dutt, Asha Parekh" },
-  { id: '1n13FVRtVxs', title: "Hum Tere Pyar Mein", artist: "Dil Ek Mandir · Lata Mangeshkar, Meena Kumari" },
-  { id: 'oSkbkxlMurA', title: "Lata Mangeshkar and Kishore Kumar Hits", artist: "Tere Bina Zindagi Se · Dekha Ek Khwab" },
-  { id: '_lQ7jA7pWkM', title: "Best Of R.D.Burman", artist: "O Mere Dil Ke Chain · Chura Liya Hai Tumne Jo Dil Ko" },
-  { id: '6rQYVedjo0g', title: "Yaad Aa Raha Hai", artist: "Disco Dancer · Mithun Chakraborty" },
-  { id: 'fsZFcX9OZaI', title: "Mohammed Rafi and Kishore Kumar Hits", artist: "Yeh Sham Mastani · Likhe Jo Khat Tujhe" },
-  { id: 'LYTYkKD7JEM', title: "Evergreen Hits Of Mukesh", artist: "Kahin Door Jab Din Dhal Jaye · Kisi Ki Muskurahaton Pe" },
-  { id: 'R9kMigqS8Tg', title: "Sad Songs Of 80s", artist: "Lambi Judaai · Aur Is Dil Mein" },
-  { id: 'hD0vuSJxzmc', title: "Intaha Ho Gai Intezar Ki", artist: "Sharaabi · Amitabh Bachchan" },
-  { id: 'ShASaB9Zmn4', title: "Tadpaoge Tadpa Lo", artist: "Barkha · Lata Mangeshkar" },
-  { id: 'J8zR_FP0lh0', title: "Holi Special", artist: "Jogi Ji Dheere Dheere · Rang Barse" },
-  { id: '0SJVwVDmDSU', title: "Rahen Na Rahen", artist: "Mamta · Lata Mangeshkar" },
-  { id: 'x5N8p6kvuBY', title: "Aur Is Dil Mein", artist: "Asha Bhosle · Suresh Wadkar" },
-  { id: 'zS5y8a5wkno', title: "Ramba Ho-Ho-Ho Samba Ho-Ho-Ho", artist: "Armaan · Usha Uthup" },
-  { id: 'KvCTOVebJq8', title: "Evergreen Hits Of Yash Chopra", artist: "Dekha Ek Khwab, Tere Chehre Se Nazar Nahin" },
-  { id: 'FecnraDiV9c', title: "Tribute to Manoj Kumar", artist: "Chand Si Mehbooba Ho Meri · Zindagi Ki Na Toote Ladi" },
-  { id: 'ASiLcEn0eJg', title: "Sadabahar Hindi Hits", artist: "Lata Mangeshkar · Mohammed Rafi" },
-  { id: 'Ny0Bq9Sjka4', title: "Satyam Shivam Sundaram", artist: "Movie All Songs · Shashi Kapoor" },
-  { id: '468bT5DHBBA', title: "Zindagi Ki Na Toote Ladi", artist: "Kranti · Lata Mangeshkar" },
-  { id: 'x50-kXC54yU', title: "A TO Z of Kishore Kumar", artist: "Dream Girl · Yeh Sham Mastani" },
-  { id: 'q6Jw29D-DHY', title: "Evergreen Hits Of K.J. Yesudas", artist: "Gori Tera Gaon Bada Pyara · Gori Tera Gaon Bada Pyara" },
-  { id: 'Xg8yYPx0-yM', title: "Mohammed Rafi and Lata Mangeshkar Hits", artist: "Teri Bindiya Re · Chup Gaye Sare Nazare" },
-  { id: 'ME0fguaRPhA', title: "Ajib Dastan Hai Yeh", artist: "Dil Apna Aur Preet Parai · Raaj Kumar, Meena Kumari, Lata Mangeshkar" },
   { id: 'KqGPnBpw4kQ', title: "Aa Chal Ke Tujhe", artist: "Father's Day Special · Kishore Kumar" },
-  { id: 'ZYG5QC3-_es', title: "Hits of 70's Rishi Kapoor", artist: "Main Shair To Nahin · Ek Main Aur Ek Tu" },
-  { id: 'O8PvCX8RUGI', title: "Hits of 70s Rajesh Khanna", artist: "Yeh Sham Mastani · Ek Ajnabee Haseena Se" },
-  { id: 'wdOtT0Ycufs', title: "Umrao Jaan - Full Album", artist: "Rekha · Dil Cheez Kya Hai" },
-  { id: 'NxvyhZYL66k', title: "Hits of Usha Khanna", artist: "Tu Is Tarah Se Mere Zindagi Main · Zindagi Pyar Ka Geet Hai" },
-  { id: 'bGpQ8L--5CM', title: "Evergreen Hits Of Manoj Kumar", artist: "Zindagi Ki Na Toote Ladi · Chand Si Mehbooba Ho Meri" },
+  { id: 'gsZjJGUVny8', title: "Aaja Tujhko Pukare Mera Pyar", artist: "Neel Kamal · Waheeda Rehman, Raaj Kumar, Manoj Kumar, Mohammad Rafi" },
+  { id: '5X2ZrM268Cc', title: "Ae Yaar Sun Yaari Teri", artist: "Amitabh Bachchan · Shashi Kapoor" },
+  { id: 'ME0fguaRPhA', title: "Ajib Dastan Hai Yeh", artist: "Dil Apna Aur Preet Parai · Raaj Kumar, Meena Kumari, Lata Mangeshkar" },
+  { id: 'x5N8p6kvuBY', title: "Aur Is Dil Mein", artist: "Asha Bhosle · Suresh Wadkar" },
+  { id: 'rVr29AqvST4', title: "Chhupa Lo Yun Dil Men", artist: "Hemant Kumar · Lata Mangeshkar" },
+  { id: 'i1y9V8DiNtY', title: "Chup Gaye Sare Nazare", artist: "Lata Mangeshkar · Mohammed Rafi" },
+  { id: 'XuCp0r3vhPQ', title: "Chura Liya Hai Tumne Jo Dil Ko", artist: "Zeenat Aman · Asha Bhosle" },
+  { id: 'WZ395Yay2f0', title: "Dard-E-Dil Dard-E-Jigar", artist: "Karz · Rishi Kapoor" },
+  { id: 'uEe94AhRwBI', title: "Dil Cheez Kya Hai", artist: "Umrao Jaan · Rekha" },
+  { id: 'NJzNMjFPhgc', title: "Din Maheene Saal", artist: "Kishore Kumar · Lata Mangeshkar" },
   { id: '_YzYm_jyQ6E', title: "Dum Maro Dum", artist: "Hare Rama Hare Krishna · Dev Anand, Zeenat Aman, Asha Bhosle, R.D. Burman" },
   { id: 'HrbiT0ntqZw', title: "Ek Roz Main Tadapkar", artist: "Bemisal · Kishore Kumar" },
   { id: 'sU5phTlw32E', title: "Faza Bhi Hai Jawan", artist: "Nikaah · Salma Agha" },
-  { id: 'l3Q_zHd3kCA', title: "Best Of Kishore Kumar", artist: "O Mere Dil Ke Chain · Mere Mehboob Qayamat Hogi" },
-  { id: 'gsZjJGUVny8', title: "Aaja Tujhko Pukare Mera Pyar", artist: "Neel Kamal · Waheeda Rehman, Raaj Kumar, Manoj Kumar, Mohammad Rafi" },
-  { id: '6aojzfL1aks', title: "Waheeda Rehman Hit Songs of 60's", artist: "Aaj Phir Jeene Ki Tamanna Hai · O Beqarar Dil" },
-  { id: 'l6PKmHMl9m4', title: "Jeetendra Evergreen Hits", artist: "Aane Se Uske Aaye Bahar · Kisi Raah Men Kisi Mod Par" },
-  { id: 'JY3Zit7ItSU', title: "Old Is Gold", artist: "60s 70s 80s Hindi Songs · Aap Ki Nazron Ne Samjha, Roop Tera Mastana" },
-  { id: 'iEGhDOy6F7M', title: "Hits of Dharmendra", artist: "Dream Girl · Aaj Mausam Bada Beimaan Hai" },
-  { id: 'iiAVuIzRU-Y', title: "Hits of Mohammed Rafi", artist: "Likhe Jo Khat Tujhe · Chura Liya Hai Tumne Jo Dil Ko" },
-  { id: 'QjM7SN_B_Z8', title: "Remembering Yogesh", artist: "Kahin Door Jab Din Dhal Jaye · Zindagi Kaisi Hai Paheli" },
-  { id: 'u_n48-jcJU4', title: "Bhagyashree Special", artist: "Mere Rang Mein Rangne Wali · Dil Deewana" },
-  { id: 'YTQlBSUt1Dw', title: "Asha Bhosle & R.D. Burman Hits", artist: "Dum Maro Dum · Aao Na Gale Lag Jao Na" },
-  { id: 'd4_NqYLWRgs', title: "Hits of Bappi Lahiri", artist: "I Am A Disco Dancer · De De Pyar De" },
-  { id: 'uEe94AhRwBI', title: "Dil Cheez Kya Hai", artist: "Umrao Jaan · Rekha" },
-  { id: 'rXpskhWTJNE', title: "Shamshad Begum Hits", artist: "Kajra Mohabbat Wala · Leke Pahla Pahla Pyar" },
-  { id: 'IbR8qDhuwyc', title: "Jooma Chumma De De", artist: "Hum · Amitabh Bachchan, Sudesh Bhosle, Kavita Krishnamurthy, Anand B" },
-  { id: 'vwoXzs1wV9Y', title: "Evergreen Hits of Javed Akhtar", artist: "Dekha Ek Khwab · Yeh Kahan Aa Gaye Hum" },
-  { id: '6p5jd7fT-ZI', title: "Hits Of Pyarelal", artist: "Om Shanti Om · Chitthi Aai Hai" },
-  { id: 'HtGswU0Br1Y', title: "Evergreen Hits of Amitabh Bachchan", artist: "Dekha Ek Khwab · Intaha Ho Gai Intezar Ki" },
-  { id: 'hjoxrRK1xH0', title: "Best of Talat Mahmood", artist: "Phir Wohi Sham Wohi Gham · Tasveer Banata Hoon" },
-  { id: 'yrUjIrWA0g0', title: "Teri Yaad Aa Rahi Hai", artist: "Lata Mangeshkar · Amit Kumar" },
-  { id: 'WZ395Yay2f0', title: "Dard-E-Dil Dard-E-Jigar", artist: "Karz · Rishi Kapoor" },
-  { id: 'Mer7TMWR31U', title: "Jhoot Bole Kauva Kate", artist: "Bobby · Lata Mangeshkar" },
-  { id: 'DuQrdDw98G0', title: "Timeless Duets: Lata Mangeshkar and Kishore Kumar", artist: "Tere Bina Zindagi Se · Dekha Ek Khwab" },
-  { id: 'rVr29AqvST4', title: "Chhupa Lo Yun Dil Men", artist: "Hemant Kumar · Lata Mangeshkar" },
-  { id: 'MxSSPDUIbQk', title: "Best Of Parveen Babi", artist: "Jawani Jan-E-Man · Raat Baaqi Baat Baaqi" },
-  { id: 'su1egEpD6zM', title: "Evergreen Hits Of ROSHAN", artist: "Rahen Na Rahen · Jo Wada Kiya Woh Nibhana Padega" },
-  { id: 'HljZCxdukJ4', title: "Mother's Day Special Songs", artist: "Tu Kitni Achhi Hai · O Maa Meri Maa" },
-  { id: 'lPVioMb8Tek', title: "Hits Of Dev Anand", artist: "Panna Ki Tamanna Hai · Abhi Na Jao Chhod Kar" },
-  { id: '5X2ZrM268Cc', title: "Ae Yaar Sun Yaari Teri", artist: "Amitabh Bachchan · Shashi Kapoor" },
-  { id: '6fTbmrYtBRA', title: "Superhits of Amol Palekar", artist: "Aanewala Pal Janewala Hai, Gori Tera Gaon Bada Pyara" },
-  { id: 'NJzNMjFPhgc', title: "Din Maheene Saal", artist: "Kishore Kumar · Lata Mangeshkar" },
-  { id: 'MzPbzmKucd4', title: "Hits of Padmini Kolhapure", artist: "Yeh Galiyan Yeh Chaubara · Zindagi Pyar Ka Geet Hai" },
-  { id: 'zD2m_TFVLWQ', title: "Best of Suman Kalyanpur", artist: "Aajkal Tere Mere Pyar Ke Charche · Old is Gold" },
-  { id: 'xONG-upaK14', title: "Piya Tu Ab To Aaja", artist: "Caravan 1971 · Asha Bhosle, R D Burman, Helen, Jeetendra" },
-  { id: '2OJGPRnz5kE', title: "Best of Joy Mukherjee", artist: "Love In Tokyo · Bahut Shukriya Badi Meherbani" },
-  { id: '1g-Vc_vXqlA', title: "Evening Chill: Hindi Evergreen Songs", artist: "Aaja Shaam Hone Aaee · Yeh Sham Mastani" },
-  { id: 'xHEc7oD7Ins', title: "Republic Day Special", artist: "Ae Mere Watan Ke Logon · Bharat Ka Rahnewala Hoon" },
-  { id: 'zDMm-gZoZXM', title: "Asha Parekh Hit Songs of 60's", artist: "Aaja Piya Tohe Pyar Doon · O Mere Sona Re Sona" },
-  { id: '3rRdJNNK2-Y', title: "Pathar Ke Sanam", artist: "Manoj Kumar · Mumtaz" },
-  { id: 'zRgMRRNmwdk', title: "Evergreen Hits Of Khayyam", artist: "In Ankhon Ki Masti · Aye Dil-E-Nadan" },
-  { id: 'TXLxM3dLQZY', title: "Lakhon Hain Yahan Dilwale", artist: "Kismat · Mahendra Kapoor" },
-  { id: 'cS59NcunnZU', title: "My Name Is Lakhan", artist: "Ram Lakhan · Anil Kapoor, Madhuri Dixit, Mohammed Aziz, Anuradha Paudwal" },
-  { id: 'J2lil6JCcTA', title: "Best of Neetu Singh", artist: "Tere Chehre Se Nazar Nahin · Ek Main Aur Ek Tu" },
-  { id: 'THZNB0BU0fs', title: "Kya Hua Tera Vada", artist: "Hum Kisise Kum Naheen · Mohammed Rafi, Sushma Shresth, R.D. Burman" },
-  { id: 'bQWUupP-1X0', title: "O.P. Nayyar Hits", artist: "Taarif Karoon Kya Uski · Pukarta Chala Hoon Main" },
-  { id: 'azQRSHm66Vo', title: "Tribute to Suman Kalyanpur", artist: "Aajkal Tere Mere Pyar Ke Charche · Tumne Pukara Aur Hum Chale Aaye" },
-  { id: 'cRBoQQa-I1A', title: "Phoolon Ka Taron Ka  - Raksha Bandhan Special Audio Jukebox", artist: "Mere Bhaiya Mere Chanda · Bhaiya Mere" },
-  { id: 'x257O-iZBFU', title: "Superhits of Rajesh Khanna", artist: "Hamen Tumse Pyar Kitna · O Mere Dil Ke Chain" },
-  { id: 'EBRMafPimiU', title: "Rakesh Roshan Hits", artist: "Sama Hai Suhana Suhana · Tum Se Badhkar" },
-  { id: 'n0glC2TE6wI', title: "Hits Of Neetu Singh", artist: "Ek Main Aur Ek Tu · Lekar Hum Diwana Dil" },
-  { id: '5N3OQUHmPHI', title: "Coffee With Kishore", artist: "Sama Hai Suhana Suhana · O Mere Dil Ke Chain" },
-  { id: 's__8bWTBYqI', title: "Zindagi Aa Raha Hoon Main", artist: "Mashaal · Kishore Kumar" },
-  { id: 'reiY02OXFaw', title: "Hits Of Mukesh", artist: "Kabhi Kabhi Mere Dil Mein · Kahin Karti Hogi Woh Mera Intezar" },
-  { id: 'n2DIy2BxsLk', title: "Best Of Suresh Wadkar", artist: "Lagi Aaj Sawan Ki · Meri Kismat Mein Tu Nahin Shayad" },
-  { id: 'rVMaSFJoDxM', title: "Hits Of Lata Mangeshkar", artist: "Ham Tere Pyar Mein · Lag Ja Gale Se Phir" },
-  { id: 'sk8OCQhFbgo', title: "Mausam Pyar Ka", artist: "Sitamgar · Asha Bhosle" },
-  { id: 'aN86usxMCYU', title: "Rekha Hit Songs of 80's", artist: "Dekha Ek Khwab · Yeh Kahan Aa Gaye Hum" },
-  { id: 'sr9b_6zFWxw', title: "Mere Mehboob Qayamat Hogi", artist: "Mr. X In Bombay · Kishore Kumar" },
-  { id: 'oG_N_rC7beo', title: "Top 50 songs of Mohammed Aziz", artist: "मुहम्मद अज़ीज़ के 50 गाने · HD Songs" },
-  { id: 'JghIjGy5U0c', title: "In the memory of Sulakshana Pandit", artist: "Somwar Ko Hum · Mausam Mausam Lovely Mausam" },
-  { id: 'ebw1zHtleFY', title: "Kishore Kumar Hits", artist: "Dekha Ek Khwab · Intaha Ho Gai Intezar Ki" },
+  { id: '1n13FVRtVxs', title: "Hum Tere Pyar Mein", artist: "Dil Ek Mandir · Lata Mangeshkar, Meena Kumari" },
+  { id: 'TYU3TJAyBgA', title: "Intaha Ho Gai Intezar Ki", artist: "Amitabh Bachchan · Asha Bhosle" },
+  { id: 'PUBaJz8eoRk', title: "Itna Na Mujhse Tu Pyar Badha", artist: "Chhaya · Lata Mangeshkar, Talat Mahmood, Sunil Dutt, Asha Parekh" },
   { id: 'f7ZxrbcBAfY', title: "Ja Re Ja O Harjaee", artist: "Kalicharan · Shatrughan Sinha" },
-  { id: 'i1y9V8DiNtY', title: "Chup Gaye Sare Nazare", artist: "Lata Mangeshkar · Mohammed Rafi" },
-  { id: 'AgVbF_Du78w', title: "Top 50 Hits Of Asha Bhosle", artist: "Chura Liya Hai Tumne Jo Dil Ko · Intaha Ho Gai Intezar" },
+  { id: 'Mer7TMWR31U', title: "Jhoot Bole Kauva Kate", artist: "Bobby · Lata Mangeshkar" },
+  { id: 'IbR8qDhuwyc', title: "Jooma Chumma De De", artist: "Hum · Amitabh Bachchan, Sudesh Bhosle, Kavita Krishnamurthy, Anand B" },
+  { id: 'THZNB0BU0fs', title: "Kya Hua Tera Vada", artist: "Hum Kisise Kum Naheen · Mohammed Rafi, Sushma Shresth, R.D. Burman" },
+  { id: 'TXLxM3dLQZY', title: "Lakhon Hain Yahan Dilwale", artist: "Kismat · Mahendra Kapoor" },
+  { id: 'sk8OCQhFbgo', title: "Mausam Pyar Ka", artist: "Sitamgar · Asha Bhosle" },
+  { id: 'sr9b_6zFWxw', title: "Mere Mehboob Qayamat Hogi", artist: "Mr. X In Bombay · Kishore Kumar" },
+  { id: 'cS59NcunnZU', title: "My Name Is Lakhan", artist: "Ram Lakhan · Anil Kapoor, Madhuri Dixit, Mohammed Aziz, Anuradha Paudwal" },
+  { id: '3rRdJNNK2-Y', title: "Pathar Ke Sanam", artist: "Manoj Kumar · Mumtaz" },
+  { id: 'xONG-upaK14', title: "Piya Tu Ab To Aaja", artist: "Caravan 1971 · Asha Bhosle, R D Burman, Helen, Jeetendra" },
+  { id: 'f08OSVD4CyQ', title: "Rahen Na Rahen", artist: "Mamta · Lata Mangeshkar" },
+  { id: 'zS5y8a5wkno', title: "Ramba Ho-Ho-Ho Samba Ho-Ho-Ho", artist: "Armaan · Usha Uthup" },
+  { id: 'ShASaB9Zmn4', title: "Tadpaoge Tadpa Lo", artist: "Barkha · Lata Mangeshkar" },
+  { id: 'yrUjIrWA0g0', title: "Teri Yaad Aa Rahi Hai", artist: "Lata Mangeshkar · Amit Kumar" },
+  { id: '6rQYVedjo0g', title: "Yaad Aa Raha Hai", artist: "Disco Dancer · Mithun Chakraborty" },
+  { id: 's__8bWTBYqI', title: "Zindagi Aa Raha Hoon Main", artist: "Mashaal · Kishore Kumar" },
+  { id: '468bT5DHBBA', title: "Zindagi Ki Na Toote Ladi", artist: "Kranti · Lata Mangeshkar" },
 ]
