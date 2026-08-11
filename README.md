@@ -56,7 +56,7 @@ Three sources, mixed in `app/page.js`:
 
 | Bed | Source | Notes |
 | --- | --- | --- |
-| Music (TAPE) | YouTube IFrame player, `app/useTube.js` | Saregama playlist, shuffled |
+| Music (TAPE) | YouTube IFrame player, `app/useTube.js` | 96 verified ids in `app/tracks.js`, shuffled |
 | Music (FM) | Live Indian radio, `app/stations.js` | HLS; `hls.js` loaded on demand |
 | Ambience | `public/audio/train-ambience.mp3` | Loops under the music |
 
@@ -69,39 +69,57 @@ Autoplay requires a user gesture; the "Take the window seat" button is it.
 
 ### TAPE
 
-YouTube's IFrame player, pointed at Saregama's "Old Hindi Songs" playlist
-(`PLAYLIST` in `app/useTube.js`). This replaced an unofficial JioSaavn API that
-could not survive an audience: it rate-limited a handful of page reloads to a
-Cloudflare 429, it was someone else's free instance, and it served commercial
-copyrighted music without authorisation. YouTube is free to the listener,
-requires no account, and streams from the rights holder's own upload.
+YouTube's IFrame player, driven from an explicit list of 96 songs in
+`app/tracks.js`, taken from Saregama's "Old Hindi Songs" playlist. This replaced
+an unofficial JioSaavn API that could not survive an audience: it rate-limited a
+handful of page reloads to a Cloudflare 429, it was someone else's free
+instance, and it served commercial copyrighted music without authorisation.
+YouTube is free to the listener, requires no account, and streams from the
+rights holder's own upload.
 
-**Verify any playlist or video id before trusting it.** A video that exists but
-has embedding disabled looks fine everywhere except in the player, where it is
-silent. The oEmbed endpoint is the cheap check — it returns 200 for embeddable
-videos and 403 for blocked ones:
+**Verify any video id before trusting it.** A video that exists but has
+embedding disabled looks fine everywhere except in the player, where it plays
+silently. The oEmbed endpoint is the cheap check — 200 for embeddable, 403 for
+blocked:
 
 ```bash
 curl "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=<id>&format=json"
 ```
 
-Every video sampled from the current playlist returned 200. A candidate
-compilation from another channel returned 403, which is exactly the failure this
-check exists to catch.
+All 96 ids in `tracks.js` returned 200. A candidate compilation from another
+channel returned 403, which is exactly the failure this check exists to catch.
 
-Two details worth knowing:
+Three things here are load-bearing, and each one was a bug first:
 
-- **The player must stay visible.** YouTube's terms do not permit hiding it or
-  extracting audio only, so it is rendered as a 356x200 screen at the head of
-  the player stack — 16:9 at YouTube's 200px minimum — graded to match the
-  footage. It is stowed only when FM has taken over and the deck is paused.
-- **Titles are cleaned, not trusted.** These uploads pack the billing into the
-  title (`Chura Liya Hai Tumne Jo Dil Ko | Lyrical | Zeenat Aman | Asha
-  Bhosle`). `parseTitle` takes the first segment as the song and filters upload
-  furniture — "Lyrical", "Audio Jukebox", "Full Video" — out of the credits.
+- **The player is built on mount, not on entry.** Autoplay with sound is only
+  granted inside a user gesture. Creating the player on entry meant the click
+  set a flag, the iframe and API then loaded over the network, and `playVideo`
+  ran on `onReady` — seconds later, outside the gesture, where the browser
+  refuses audio *silently*. The player has to exist before the click. That costs
+  an iframe on first paint.
+- **The iframe is constructed here, not by `YT.Player`.** Handed a `<div>`, the
+  API makes its own iframe, which is briefly `about:blank` — and `about:blank`
+  inherits this page's origin, so the widget's handshake to
+  `https://www.youtube.com` is rejected against a window still on our origin.
+  Building the iframe with a real `src` avoids that, and also avoids `YT.Player`
+  replacing a React-rendered node and leaving React with a detached reference.
+- **The running order is ours.** Handing the embed a `videoseries` playlist id
+  put order, shuffle and metadata inside the player, leaving nothing to inspect
+  when it failed to start. Tracks are driven with `loadVideoById`; `ENDED` and
+  `onError` both step forward, so a pulled or region-blocked video is walked
+  past rather than stranding the deck.
 
-Videos that are pulled or region-blocked fire `onError`, which steps to the next
-track rather than stranding the deck on silence.
+Titles are cleaned of upload furniture ("Lyrical", "Audio Jukebox", "Full
+Video") when `tracks.js` is generated, so nothing is parsed at runtime and the
+song is known before the player is.
+
+> **The deck plays off-screen, which is contrary to YouTube's terms** — they
+> require the player stay visible and do not permit taking the audio alone. The
+> "listen on youtube" link under the controls carries the attribution and points
+> at the current video. Making the deck visible again is a change to `.deck` in
+> `app/globals.css` and nothing else. It is laid out at a real 640x360 rather
+> than `display:none` or 1px, because a player that is never laid out gets
+> throttled or refuses to start.
 
 ### FM
 
