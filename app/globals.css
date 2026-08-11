@@ -1,0 +1,257 @@
+:root{
+  --cream:#e9e3d5;
+  --dim:rgba(233,227,213,.4);
+  --faint:rgba(233,227,213,.24);
+  --amber:#d2a851;
+  --mono:'Courier New',Courier,monospace;
+  --serif:Georgia,'Times New Roman',serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#040507;color:var(--cream);font-family:var(--serif);overflow:hidden}
+button{font:inherit}
+
+.scene{position:relative;width:100vw;height:100svh;overflow:hidden;background:#040507;isolation:isolate}
+
+/* ---- the window itself is footage, so nothing is drawn on top of it ---- */
+.world{position:absolute;inset:0;overflow:hidden;background:#040507}
+
+.plate{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;
+  /* Crops the generated-video watermark past the right edge and gives the
+     footage a faded, warm 70s stock grade. */
+  transform:scale(1.14) translate(3.5%,2%);
+  /* The source footage is already night-dark, and grain, scanlines and vignette
+     all land on top of it. Grading it down as well buries the window, which is
+     the one thing the whole page exists to show — so the grade is a tint, not a
+     transformation. Warmth and a little lift; nothing that reads as a filter. */
+  filter:sepia(.13) saturate(.92) contrast(1.02) brightness(1.08) hue-rotate(-4deg);
+  opacity:0;
+  transition:opacity 2.6s ease-in-out;
+  will-change:opacity;
+  animation:weave 7s ease-in-out infinite;
+}
+.plate.live{opacity:1}
+
+/* Film weave — the tiny drift of stock through a gate. */
+@keyframes weave{
+  0%,100%{transform:scale(1.14) translate(3.5%,2%)}
+  33%{transform:scale(1.142) translate(3.42%,2.1%)}
+  66%{transform:scale(1.138) translate(3.56%,1.92%)}
+}
+
+/* Coach light state, painted as a wash since the footage can't be relit. */
+.coach-light{
+  position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;
+  background:radial-gradient(76% 58% at 50% 6%,rgba(255,206,132,.8),rgba(255,180,90,.14) 55%,transparent 78%);
+  opacity:.85;transition:opacity 1.1s ease;
+}
+.lights-off .coach-light{opacity:0}
+/* lights-off is the default state, so it must not be the darkest grade — with
+   the coach light out there is less glare on the glass, not less scenery. */
+.lights-off .plate{filter:sepia(.15) saturate(.88) contrast(1.04) brightness(1.04) hue-rotate(-6deg)}
+.window-open .plate{filter:sepia(.09) saturate(.98) contrast(1) brightness(1.2) hue-rotate(-2deg)}
+
+/* Scanlines at a 4px pitch rather than 3px, and half the old strength. Tight
+   dark lines over 720p footage read as a screen-door texture, not as tape. */
+.scanlines{
+  position:absolute;inset:0;pointer-events:none;opacity:.09;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,.34) 0 1px,transparent 1px 4px);
+}
+/* Vignette plus soft scrims at top and bottom. Without these the type is
+   legible over a dark frame and invisible over a bright one — the footage
+   swings a long way between clips. Gradients, not panels, so the UI keeps
+   sitting on the image rather than in a box. */
+.vignette{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(2,3,5,.6) 0%,rgba(2,3,5,.22) 12%,transparent 22%),
+    linear-gradient(0deg,rgba(2,3,5,.72) 0%,rgba(2,3,5,.3) 16%,transparent 30%),
+    radial-gradient(130% 100% at 50% 46%,transparent 56%,rgba(3,4,6,.2) 88%,rgba(2,3,4,.4) 100%);
+}
+
+/* Tape tracking bar — parked off-screen, swept through on glitch. */
+.tracking{
+  position:absolute;left:0;right:0;height:16%;top:-20%;pointer-events:none;opacity:0;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.07) 40%,rgba(120,180,255,.05) 60%,transparent);
+  filter:blur(1px);
+}
+.glitching .tracking{animation:track .42s linear;opacity:1}
+/* A slip in the transport, not a broken tape — the old version dropped the
+   saturation by half and darkened the frame, which read as a rendering fault. */
+.glitching .plate.live{animation:none;transform:scale(1.14) translate(3.78%,2%);filter:sepia(.18) saturate(.82) contrast(1.08) brightness(1.02)}
+@keyframes track{from{top:-20%}to{top:110%}}
+
+.grain{
+  position:absolute;z-index:20;inset:-80%;pointer-events:none;opacity:.038;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");
+  animation:grain .16s steps(2) infinite;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)}25%{transform:translate(2%,-3%)}50%{transform:translate(-3%,2%)}
+  75%{transform:translate(1%,3%)}100%{transform:translate(-2%,-1%)}
+}
+
+/* ---------------------------------------------------------------------------
+   UI. No panels, no borders, no blur, no rounded corners — type sits directly
+   on the footage. Old signage, not an interface.
+   --------------------------------------------------------------------------- */
+
+.entry{
+  position:absolute;z-index:10;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(88vw,600px);text-align:center;text-shadow:0 2px 28px rgba(0,0,0,.9);
+}
+.eyebrow{
+  font-family:var(--mono);font-size:9px;letter-spacing:.6em;text-indent:.6em;
+  margin:0 0 26px;color:var(--dim);
+}
+.entry h1{
+  font-weight:400;font-size:clamp(38px,6.4vw,72px);line-height:1.04;
+  letter-spacing:-.03em;margin:0;
+}
+.entry-copy{
+  font-family:var(--mono);font-size:11px;line-height:2;color:var(--dim);
+  margin:28px auto 34px;width:min(330px,90%);letter-spacing:.06em;
+}
+.enter-button{
+  border:0;background:transparent;padding:0;cursor:pointer;color:var(--cream);
+  font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;
+  transition:color .3s;
+}
+.enter-button::before{content:'[ '}
+.enter-button::after{content:' ]'}
+.enter-button:hover{color:var(--amber)}
+.enter-button span{display:none}
+
+.topline{
+  position:absolute;z-index:8;top:38px;left:38px;right:38px;
+  display:flex;align-items:baseline;justify-content:space-between;
+  font-family:var(--mono);font-size:9px;letter-spacing:.3em;text-transform:uppercase;
+  text-shadow:0 1px 12px rgba(0,0,0,.9);
+}
+.topline>div:first-child{display:flex;align-items:baseline;gap:14px}
+.topline strong{font-weight:400}
+.topline span{color:var(--faint);letter-spacing:.22em}
+.passengers{display:flex;gap:8px;align-items:center;color:var(--faint)}
+.passengers i{
+  width:3px;height:3px;border-radius:50%;background:currentColor;
+  animation:blink 3.2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.journey-note{
+  position:absolute;z-index:8;top:78px;left:50%;transform:translateX(-50%);
+  font-size:12px;font-style:italic;color:var(--dim);white-space:nowrap;
+  text-shadow:0 1px 12px rgba(0,0,0,.9);
+}
+.journey-note strong{font-weight:400;font-style:normal;color:var(--cream)}
+
+/* Player: a stack of type, centred, with nothing drawn behind it. */
+.player{
+  position:absolute;z-index:9;left:50%;bottom:112px;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:0;
+  width:min(86vw,440px);text-align:center;
+  text-shadow:0 1px 14px rgba(0,0,0,.9);
+}
+
+.band{display:flex;align-items:center;gap:9px;margin-bottom:16px}
+.band button{
+  border:0;background:transparent;padding:0;cursor:pointer;
+  font-family:var(--mono);font-size:9px;letter-spacing:.34em;
+  color:var(--faint);transition:color .25s;
+}
+.band button:hover{color:var(--dim)}
+.band button.on{color:var(--amber)}
+.band i{font-family:var(--mono);font-size:9px;color:var(--faint);font-style:normal}
+
+.player .title{
+  font-family:var(--serif);font-size:17px;font-weight:400;line-height:1.3;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.player .credit{
+  font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--dim);
+  margin-top:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+.controls{display:flex;align-items:center;gap:26px;margin-top:20px}
+.controls button{
+  border:0;background:transparent;padding:0;cursor:pointer;
+  color:var(--dim);font-family:var(--mono);font-size:11px;transition:color .25s;
+}
+.controls button:hover{color:var(--cream)}
+.controls .play{font-size:9px;color:var(--cream)}
+
+/* Volume: a hairline of track with a filled run behind the thumb. No numbers,
+   no icon, no box — it reads as another rule of type until it's touched. */
+.level{display:block;width:132px;margin-top:22px}
+.level input{
+  -webkit-appearance:none;appearance:none;
+  display:block;width:100%;height:14px;margin:0;padding:0;
+  background:transparent;cursor:pointer;opacity:.5;transition:opacity .3s;
+}
+.level input:hover,.level input:focus-visible{opacity:1;outline:none}
+/* The fill is painted on the track, since the thumb can't colour behind itself. */
+.level input::-webkit-slider-runnable-track{
+  height:1px;border-radius:0;
+  background:linear-gradient(90deg,var(--cream) 0 var(--fill),rgba(233,227,213,.2) var(--fill) 100%);
+}
+.level input::-moz-range-track{height:1px;background:rgba(233,227,213,.2)}
+.level input::-moz-range-progress{height:1px;background:var(--cream)}
+.level input::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:5px;height:5px;border:0;border-radius:50%;background:var(--amber);
+  margin-top:-2px;
+}
+.level input::-moz-range-thumb{width:5px;height:5px;border:0;border-radius:50%;background:var(--amber)}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+footer{
+  position:absolute;z-index:9;left:50%;bottom:58px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:12px;white-space:nowrap;
+  font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--faint);
+  text-shadow:0 1px 12px rgba(0,0,0,.9);
+}
+footer button{border:0;background:transparent;color:inherit;cursor:pointer;padding:0;transition:color .25s}
+footer button:hover{color:var(--cream)}
+
+.spotify-link{
+  position:absolute;z-index:9;left:50%;bottom:28px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:8px;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--faint);text-decoration:none;white-space:nowrap;transition:color .3s;
+  text-shadow:0 1px 12px rgba(0,0,0,.9);
+}
+.spotify-link:hover{color:var(--amber)}
+.spotify-link span{margin-left:5px}
+
+@media(max-width:720px){
+  .topline{top:24px;left:22px;right:22px;font-size:8px;letter-spacing:.24em}
+  .topline>div:first-child{gap:10px}
+  /* At this width the strapline and the counter collide into one run-on line. */
+  .topline>div:first-child span{display:none}
+  /* Names run to 28 characters ("CHHATRAPATI SHIVAJI TERMINUS"); let the long
+     ones wrap on a narrow screen rather than run off the edge. */
+  .journey-note{top:58px;font-size:11px;white-space:normal;text-align:center;max-width:86vw}
+  .player{bottom:96px;width:88vw}
+  .player .title{font-size:15px}
+  .controls{gap:30px}
+  .level{width:150px;margin-top:20px}
+  footer{bottom:52px;gap:10px;font-size:8px;letter-spacing:.16em}
+  .spotify-link{bottom:26px;font-size:7px}
+  .entry h1{font-size:40px}
+  .entry-copy{font-size:10px;margin:22px auto 30px}
+}
+
+/* Nothing to hover with, so the hairline stays legible on its own. */
+@media(hover:none){
+  .level input{opacity:.75}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .plate,.grain,.passengers i{animation:none}
+  .plate{transition:opacity .6s linear}
+  .tracking{display:none}
+}
