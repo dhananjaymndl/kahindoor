@@ -87,36 +87,48 @@ export function useTube(active) {
     if (!active || !hostRef.current || playerRef.current) return
 
     let cancelled = false
-    // YT.Player *replaces* the element it is handed with an iframe. Handing it
-    // a node React rendered leaves React holding a reference to a node that is
-    // no longer in the tree, and unmount then throws on removeChild. So the
-    // mount point is created here, outside React's ownership, inside a wrapper
-    // React does own.
-    const mount = document.createElement('div')
-    hostRef.current.appendChild(mount)
+
+    // The iframe is built here rather than by handing YT.Player a <div>.
+    //
+    // Given a div, the API creates its own iframe, which is briefly about:blank
+    // — and about:blank inherits *this* page's origin. The widget then posts its
+    // handshake with targetOrigin https://www.youtube.com, the browser compares
+    // that against a window still on our origin, and rejects it:
+    //
+    //   Failed to execute 'postMessage' ... target origin
+    //   ('https://www.youtube.com') does not match the recipient window's
+    //   origin ('https://kahindoor.vercel.app')
+    //
+    // Constructing the iframe with a real src means it is never on our origin,
+    // so the handshake has a youtube.com window to talk to from the start.
+    // Passing an existing iframe also sidesteps the other problem with a div:
+    // YT.Player *replaces* the node it is given, and replacing a node React
+    // rendered leaves React holding a detached reference that throws on unmount.
+    const params = new URLSearchParams({
+      list: PLAYLIST,
+      autoplay: '0',
+      controls: '0',
+      disablekb: '1',
+      modestbranding: '1',
+      rel: '0',
+      playsinline: '1',
+      iv_load_policy: '3',
+      enablejsapi: '1',
+      origin: window.location.origin,
+    })
+    const frame = document.createElement('iframe')
+    frame.src = `https://www.youtube.com/embed/videoseries?${params}`
+    frame.width = '640'
+    frame.height = '360'
+    frame.allow = 'autoplay; encrypted-media'
+    frame.setAttribute('frameborder', '0')
+    frame.title = 'Tape deck'
+    hostRef.current.appendChild(frame)
 
     loadApi()
       .then(YT => {
         if (cancelled) return
-        playerRef.current = new YT.Player(mount, {
-          width: '100%',
-          height: '100%',
-          playerVars: {
-            listType: 'playlist',
-            list: PLAYLIST,
-            autoplay: 0,
-            controls: 0,
-            disablekb: 1,
-            modestbranding: 1,
-            rel: 0,
-            playsinline: 1,
-            iv_load_policy: 3,
-            // Without these the widget posts to 'https://www.youtube.com' and
-            // the browser rejects every message with an origin mismatch, which
-            // is the console error this whole player used to spew.
-            enablejsapi: 1,
-            origin: window.location.origin,
-          },
+        playerRef.current = new YT.Player(frame, {
           events: {
             onReady: e => {
               if (cancelled) return
@@ -144,7 +156,8 @@ export function useTube(active) {
       playerRef.current?.destroy?.()
       playerRef.current = null
       setReady(false)
-      // The iframe replaced `mount`, so clear the wrapper rather than the node.
+      // destroy() removes the iframe itself; clearing the wrapper covers the
+      // case where the player was never constructed.
       if (hostRef.current) hostRef.current.innerHTML = ''
     }
   }, [active, readTrack])
