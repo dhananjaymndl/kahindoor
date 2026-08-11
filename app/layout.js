@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Window Seat — Somewhere Between Two Stations',
+  title: 'Kahin Door — Somewhere Between Two Stations',
   description: 'A tiny nostalgic Indian train-window experience.'
 }
 

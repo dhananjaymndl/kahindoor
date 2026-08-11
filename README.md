@@ -1,4 +1,4 @@
-# Window Seat
+# Kahin Door
 
 A one-screen ambient web experience: an Indian night train, seen from the
 window. Real footage, old film music, rails underneath. No nav, no account,
@@ -56,7 +56,7 @@ Three sources, mixed in `app/page.js`:
 
 | Bed | Source | Notes |
 | --- | --- | --- |
-| Music (TAPE) | JioSaavn CDN via `app/saavn.js` | ~87 tracks, shuffled per visit |
+| Music (TAPE) | YouTube IFrame player, `app/useTube.js` | Saregama playlist, shuffled |
 | Music (FM) | Live Indian radio, `app/stations.js` | HLS; `hls.js` loaded on demand |
 | Ambience | `public/audio/train-ambience.mp3` | Loops under the music |
 
@@ -69,31 +69,39 @@ Autoplay requires a user gesture; the "Take the window seat" button is it.
 
 ### TAPE
 
-Old Hindi film music with proper metadata, from an unofficial JioSaavn API.
-Three curated playlists yield ~87 tracks after filtering. Nothing is bundled and
-nothing is proxied — the browser fetches track lists from the API and streams
-audio from JioSaavn's CDN, so none of it counts against hosting bandwidth.
+YouTube's IFrame player, pointed at Saregama's "Old Hindi Songs" playlist
+(`PLAYLIST` in `app/useTube.js`). This replaced an unofficial JioSaavn API that
+could not survive an audience: it rate-limited a handful of page reloads to a
+Cloudflare 429, it was someone else's free instance, and it served commercial
+copyrighted music without authorisation. YouTube is free to the listener,
+requires no account, and streams from the rights holder's own upload.
 
-Two filters do the quality work:
+**Verify any playlist or video id before trusting it.** A video that exists but
+has embedding disabled looks fine everywhere except in the player, where it is
+silent. The oEmbed endpoint is the cheap check — it returns 200 for embeddable
+videos and 403 for blocked ones:
 
-- **`MAX_YEAR = 1985`** — the playlists run into the 90s and 2000s, which breaks
-  the era. Raise it to let them back in.
-- **Singer role** — `artists.primary` mixes composers and lyricists in with
-  singers, which is how a Kishore song ends up credited to R.D. Burman. Only
-  artists whose `role` matches `singer` are credited, falling back to primary.
+```bash
+curl "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=<id>&format=json"
+```
 
-A few odd credits still get through; those are upstream metadata errors.
+Every video sampled from the current playlist returned 200. A candidate
+compilation from another channel returned 403, which is exactly the failure this
+check exists to catch.
 
-> **Before deploying publicly.** This API is reverse-engineered and unofficial,
-> and serves commercial copyrighted music without authorisation. It is also
-> someone else's free instance and can disappear — `saavn.dev`, the one most
-> guides point at, no longer resolves. Self-host
-> [sumitkolhe/jiosaavn-api](https://github.com/sumitkolhe/jiosaavn-api) and point
-> at it:
->
-> ```bash
-> NEXT_PUBLIC_SAAVN_API=https://your-instance.workers.dev
-> ```
+Two details worth knowing:
+
+- **The player must stay visible.** YouTube's terms do not permit hiding it or
+  extracting audio only, so it is rendered as a 356x200 screen at the head of
+  the player stack — 16:9 at YouTube's 200px minimum — graded to match the
+  footage. It is stowed only when FM has taken over and the deck is paused.
+- **Titles are cleaned, not trusted.** These uploads pack the billing into the
+  title (`Chura Liya Hai Tumne Jo Dil Ko | Lyrical | Zeenat Aman | Asha
+  Bhosle`). `parseTitle` takes the first segment as the song and filters upload
+  furniture — "Lyrical", "Audio Jukebox", "Full Video" — out of the credits.
+
+Videos that are pulled or region-blocked fire `onError`, which steps to the next
+track rather than stranding the deck on silence.
 
 ### FM
 

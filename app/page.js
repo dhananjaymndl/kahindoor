@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRadio } from './useRadio'
+import { useTube } from './useTube'
 import { useFm } from './useFm'
 
 // The clips share framing at slightly different moments, so crossfading between
@@ -79,9 +79,11 @@ export default function Home() {
 
   const ambienceRef = useRef(null)
   const [band, setBand] = useState('tape') // 'tape' = the record library, 'fm' = live radio
-  const radio = useRadio()
+  // Built on entry, not on band — tearing the player down every time someone
+  // glances at FM would cost a fresh iframe and lose the place in the playlist.
+  const tape = useTube(entered)
   const fm = useFm(band === 'fm')
-  const source = band === 'fm' ? fm : radio
+  const source = band === 'fm' ? fm : tape
   // One corridor per visit, boarded at its origin and walked stop by stop.
   const route = useMemo(() => routes[Math.floor(Math.random() * routes.length)], [])
   const [leg, setLeg] = useState(0)
@@ -147,22 +149,24 @@ export default function Home() {
 
   // Opening the window lets the night in and pushes the music back. Both beds
   // ride the master level, so muting is one move.
-  const setRadioVolume = radio.setVolume
+  const setTapeVolume = tape.setVolume
   const setFmVolume = fm.setVolume
   useEffect(() => {
     const state = windowOpen ? 'open' : 'closed'
     const music = MUSIC[state] * volume
-    setRadioVolume(music)
+    setTapeVolume(music)
     setFmVolume(music)
     if (ambienceRef.current) ambienceRef.current.volume = AMBIENCE[state] * volume
-  }, [windowOpen, volume, setRadioVolume, setFmVolume])
+    // tape.ready is a dependency because the YouTube player can't take a volume
+    // until it exists; this re-applies the mix the moment it does.
+  }, [windowOpen, volume, tape.ready, setTapeVolume, setFmVolume])
 
   // Only one source is ever audible; switching bands hands playback over.
-  const radioPause = radio.pause
+  const tapePause = tape.pause
   const fmPause = fm.pause
   useEffect(() => {
     if (!entered) return
-    if (band === 'fm') { radioPause(); fm.play() } else { fmPause(); radio.play() }
+    if (band === 'fm') { tapePause(); fm.play() } else { fmPause(); tape.play() }
     // Deliberately keyed on band alone — this is the hand-off, not a play/pause sync.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [band, entered])
@@ -178,15 +182,14 @@ export default function Home() {
         title: fm.error ? 'Static' : fm.station?.name ?? 'Tuning…',
         artist: fm.error ? `${fm.station?.band ?? ''} · ${fm.error}` : fm.station?.band ?? '',
       }
-    : radio.error
-      ? { title: 'Radio silence', artist: radio.error }
-      : radio.loading
-        ? { title: 'Tuning…', artist: 'finding the signal' }
-        : radio.current ?? { title: 'Radio silence', artist: '—' }
+    : tape.error
+      ? { title: 'Radio silence', artist: tape.error }
+      : tape.loading
+        ? { title: 'Threading the tape…', artist: 'a moment' }
+        : tape.current ?? { title: 'Old Hindi', artist: '' }
 
   return (
     <main className={`scene ${lightsOff ? 'lights-off' : ''} ${windowOpen ? 'window-open' : ''} ${glitch ? 'glitching' : ''}`}>
-      <audio {...radio.bind} />
       <audio {...fm.bind} />
       <audio ref={ambienceRef} src="/audio/train-ambience.mp3" loop preload="none" />
 
@@ -212,7 +215,7 @@ export default function Home() {
 
       {!entered && (
         <section className="entry">
-          <p className="eyebrow">WINDOW SEAT</p>
+          <p className="eyebrow">KAHIN DOOR</p>
           <h1>Somewhere between<br />two stations.</h1>
           <p className="entry-copy">A little music. A dark window. Nowhere you need to be.</p>
           <button className="enter-button" onClick={enter}>Take the window seat <span>→</span></button>
@@ -223,7 +226,7 @@ export default function Home() {
         <>
           <header className="topline">
             <div>
-              <strong>WINDOW SEAT</strong>
+              <strong>KAHIN DOOR</strong>
               <span>night journey</span>
             </div>
             <div className="passengers"><i /> {passengers} window seats occupied</div>
@@ -234,6 +237,14 @@ export default function Home() {
           </div>
 
           <section className="player">
+            {/* YouTube's terms require the player stay visible and unobscured
+                while it plays, so this is a real screen at the head of the
+                stack rather than a hidden iframe. It only stows when FM has
+                taken over, by which point the deck is paused. */}
+            <div className={`deck ${band === 'tape' ? '' : 'stowed'}`}>
+              <div className="deck-frame" ref={tape.hostRef} />
+            </div>
+
             <div className="band" role="group" aria-label="Source">
               <button
                 className={band === 'tape' ? 'on' : ''}
@@ -284,7 +295,7 @@ export default function Home() {
             <span>·</span>
             <button onClick={() => setWindowOpen(!windowOpen)}>{windowOpen ? 'close window' : 'open window'}</button>
             <span>·</span>
-            <button onClick={() => navigator.share?.({ title: 'Window Seat', text: 'Somewhere between two stations.', url: window.location.href })}>share journey</button>
+            <button onClick={() => navigator.share?.({ title: 'Kahin Door', text: 'Somewhere between two stations.', url: window.location.href })}>share journey</button>
           </footer>
 
           <a
