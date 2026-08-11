@@ -193,6 +193,17 @@ export default function Home() {
       <audio {...fm.bind} />
       <audio ref={ambienceRef} src="/audio/train-ambience.mp3" loop preload="none" />
 
+      {/* The tape deck. Kept at a real 640x360 and moved off-screen rather than
+          display:none — a player that is never laid out gets throttled or
+          refuses to start in some browsers, and zero-sizing it does the same.
+          Note this is contrary to YouTube's terms, which require the player to
+          stay visible; the "listen on youtube" link under the controls is the
+          attribution that goes with taking the audio alone. Making the deck
+          visible again is a CSS change in `.deck`, nothing more. */}
+      <div className="deck" aria-hidden="true">
+        <div ref={tape.hostRef} />
+      </div>
+
       <div className="world" aria-hidden="true">
         {decks.map((clipIndex, deck) => (
           <video
@@ -237,14 +248,6 @@ export default function Home() {
           </div>
 
           <section className="player">
-            {/* YouTube's terms require the player stay visible and unobscured
-                while it plays, so this is a real screen at the head of the
-                stack rather than a hidden iframe. It only stows when FM has
-                taken over, by which point the deck is paused. */}
-            <div className={`deck ${band === 'tape' ? '' : 'stowed'}`}>
-              <div className="deck-frame" ref={tape.hostRef} />
-            </div>
-
             <div className="band" role="group" aria-label="Source">
               <button
                 className={band === 'tape' ? 'on' : ''}
@@ -288,6 +291,17 @@ export default function Home() {
                 style={{ '--fill': `${volume * 100}%` }}
               />
             </label>
+
+            {band === 'tape' && tape.current?.id && (
+              <a
+                className="tube-link"
+                href={`https://www.youtube.com/watch?v=${tape.current.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                listen on youtube <span>↗</span>
+              </a>
+            )}
           </section>
 
           <footer>

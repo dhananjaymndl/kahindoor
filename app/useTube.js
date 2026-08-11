@@ -77,7 +77,7 @@ export function useTube(active) {
     const p = playerRef.current
     if (!p?.getVideoData) return
     const data = p.getVideoData()
-    if (data?.title) setCurrent(parseTitle(data.title, data.author))
+    if (data?.title) setCurrent({ ...parseTitle(data.title, data.author), id: data.video_id })
   }, [])
 
   useEffect(() => {
@@ -111,6 +111,11 @@ export function useTube(active) {
             rel: 0,
             playsinline: 1,
             iv_load_policy: 3,
+            // Without these the widget posts to 'https://www.youtube.com' and
+            // the browser rejects every message with an origin mismatch, which
+            // is the console error this whole player used to spew.
+            enablejsapi: 1,
+            origin: window.location.origin,
           },
           events: {
             onReady: e => {

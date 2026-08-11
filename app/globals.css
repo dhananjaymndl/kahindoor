@@ -222,21 +222,24 @@ footer button:hover{color:var(--cream)}
    is a real 220px screen rather than a 1px cheat — but it is graded to match
    the footage and sits low in the corner, so it reads as a little monitor in
    the coach instead of an embed bolted onto the page. */
-.deck{margin-bottom:20px;opacity:.66;transition:opacity .4s ease}
-.deck:hover{opacity:1}
-/* Stowed while FM is playing. The deck is paused by then, so nothing is being
-   hidden mid-playback. */
-.deck.stowed{display:none}
-
-/* 356x200 — 16:9 at YouTube's 200px minimum, so the video fills the frame
-   exactly with nothing cropped and nothing letterboxed. Graded to match the
-   footage so it reads as a small monitor in the coach, not an embed. */
-.deck-frame{
-  width:min(356px,86vw);aspect-ratio:16/9;overflow:hidden;background:#000;
-  border:1px solid rgba(233,227,213,.14);
-  filter:sepia(.22) saturate(.84) contrast(1.02) brightness(.92);
+/* Laid out at a real size and parked off-screen. Not display:none, not 1px:
+   both get the player throttled or refused a start in some browsers. */
+.deck{
+  position:fixed;left:-10000px;top:0;
+  width:640px;height:360px;pointer-events:none;
 }
-.deck-frame iframe{display:block;width:100%;height:100%;border:0}
+.deck iframe{width:100%;height:100%;border:0}
+
+/* Attribution for taking the audio alone. Quietest thing on the screen until
+   it is wanted. */
+.tube-link{
+  margin-top:18px;
+  font-family:var(--mono);font-size:8px;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--faint);text-decoration:none;transition:color .3s;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.tube-link:hover{color:var(--amber)}
+.tube-link span{margin-left:5px}
 
 .spotify-link{
   position:absolute;z-index:9;left:50%;bottom:28px;transform:translateX(-50%);
@@ -255,9 +258,7 @@ footer button:hover{color:var(--cream)}
   /* Names run to 28 characters ("CHHATRAPATI SHIVAJI TERMINUS"); let the long
      ones wrap on a narrow screen rather than run off the edge. */
   .journey-note{top:58px;font-size:11px;white-space:normal;text-align:center;max-width:86vw}
-  /* The deck adds ~200px to the stack, so the whole player sits lower. */
-  .player{bottom:78px;width:88vw}
-  .deck{margin-bottom:16px}
+  .player{bottom:96px;width:88vw}
   .player .title{font-size:15px}
   .controls{gap:30px}
   .level{width:150px;margin-top:20px}
